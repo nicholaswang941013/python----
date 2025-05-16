@@ -14,9 +14,40 @@ from registration import show_registration_form
 import datetime
 import time
 import threading
+import sqlite3
 
+# 檢查資料庫是否存在，如果不存在則從 schema.sql 創建
+def initialize_database_from_schema():
+    """從 schema.sql 初始化資料庫"""
+    db_path = os.path.join(os.path.dirname(__file__), 'users.db')
+    schema_path = os.path.join(os.path.dirname(__file__), 'schema.sql')
+    
+    # 如果資料庫已存在，直接返回
+    if os.path.exists(db_path):
+        return
+        
+    print("資料庫不存在，從 schema.sql 創建新資料庫...")
+    
+    # 讀取 schema.sql 文件
+    try:
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            schema_sql = f.read()
+    except Exception as e:
+        messagebox.showerror("錯誤", f"無法讀取 schema.sql: {e}")
+        sys.exit(1)
+        
+    # 創建資料庫和表格
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.executescript(schema_sql)
+        conn.close()
+        print("成功創建資料庫！")
+    except Exception as e:
+        messagebox.showerror("錯誤", f"創建資料庫失敗: {e}")
+        sys.exit(1)
 
 # 初始化資料庫
+initialize_database_from_schema()
 initialize_database()
 
 
@@ -89,11 +120,13 @@ def show_dispatch_notification(count):
         # 如果管理員正在查看需求單列表，刷新列表
         if current_app.requirement_manager:
             try:
-                # 刷新已發派和預約發派的需求單列表
+                # 刷新已發派、預約發派和待審核的需求單列表
                 if hasattr(current_app.requirement_manager, 'load_admin_dispatched_requirements'):
                     current_app.requirement_manager.load_admin_dispatched_requirements()
                 if hasattr(current_app.requirement_manager, 'load_admin_scheduled_requirements'):
                     current_app.requirement_manager.load_admin_scheduled_requirements()
+                if hasattr(current_app.requirement_manager, 'load_admin_reviewing_requirements'):
+                    current_app.requirement_manager.load_admin_reviewing_requirements()
             except Exception as e:
                 print(f"刷新需求單列表錯誤: {e}")
                 pass
@@ -342,4 +375,4 @@ start_global_scheduler()
 
 # 啟動主迴圈
 if __name__ == "__main__":
-    root.mainloop() 
+    root.mainloop()
